@@ -36,3 +36,7 @@ create table нет, но  есть create table ... on cluster
 
 #### узнать тип данных возвращаемой функции
 `SELECT toTypeName(IPv4StringToNum(''))` [papa carlo]
+
+
+Vadim Metikov, [26.02.18 13:59]
+кто-нибудь прореживал так данные? партишионинг по ГГГГММ более всего подходит

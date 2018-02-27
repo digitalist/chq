@@ -7,29 +7,34 @@
 
 ## 1.0 tl;dr: подключение
 
-CH вешается на два порта:
-- 8123 (http-протокол),
-- 9000 (бинарный протокол).
+CH binds on two ports
+- 8123 (http),
+- 9000 (binary protocol).
 
-Если их перепутать, никуда вы не подключитесь. Поэтому не путайте порты и настройки ssh-туннелей.
+You won't be able to connect if you mix them up. Don't mix them in your apps or ssh tunnels.
 
-## 1.1 конфиг:
-    основной здесь:
-    /etc/clickhouse-server/config.xml
-    главные опции там -
-    - listener (какой интерфейс слушать, для закрытого aws можно 0.0.0.0)
-    - <path>/var/lib/clickhouse/</path> путь к данным
+## 1.1 config:
+the maing config is here:
 
-    в /etc/metrika.xml (по умолчанию называется так) можно создать переопределяющие настройки:
-    - <yandex><zookeeper><node id='1'><host>172.31.16.254</host><port>2181</port></node></zookeeper></yandex>
+`/etc/clickhouse-server/config.xml`
+    
+main options:
+
+- listener (what interface/network card to listen,  0.0.0.0 to listen on all interfaces, if you doon't care for security or running it inside virtual network only)
+- <path>/var/lib/clickhouse/</path>: path to data
+
+- /etc/metrika.xml (default filename) you can override some options:   
+    <yandex><zookeeper><node id='1'><host>172.31.16.254</host><port>2181</port></node></zookeeper></yandex>
 
 
-## 1.2 распределенная сборка
-    - для сборки с помощью ./release нужно отключить флаг -pie в debian/rules, иначе distcc в текущей реализации собирает только на локалхосте
+## 1.2 distributed build
+
+when building on linux with `./release` script, you need to disable -pie in `debian/rules`, othwerise distcc in its current version
+will use only localhost (because of spec- gcc flag, even if you're using clang)
 
 ## 1.3 single-node
 
-## 1.4 кластер/реплики
+## 1.4 cluster/replica
 
 
 ## 1.2 single-node
@@ -86,33 +91,29 @@ https://clickhouse.yandex/docs/ru/single/#proizvolnyi-klyuch-particzionirovaniya
 балансировщик и прокси [chproxy](https://github.com/Vertamedia/chproxy)
 
 
-# 5. работа с запросами
+# 5. Working with queries
 
-## 5.0 Важное: вставка данных в КХ.
+## 5.0 Important: inserting data
 
-В КХ нельзя вставлять данные маленькими порциями. Чем больше порция - тем лучше. При высокочастотной записи
-по одной записи КХ начинает отставать, потом зависает. Это вызвано внутренними структурами данных КХ.
+You don't insert small quantites of data into CH. High-frequency inserts of single rows will cause CH dealys, then it will hang. This is caused by inner working of most used types of table engines: *MergeTrees
 
-Пишите хоть по одной строке, но не часто, либо:
+You can write single rows, but infrequently.
 
 [Tima Ber]
-- не вставлять меньше чем 1000 строк. Ни 10, ни 20, не меньше 1к.   
-- вставлять не часто, не чаще 1 раза в секунду, в один поток.
-- Лучше увеличить размер батча, чем иметь больше одного потока вставки.
+- Do not insert less than 1000 rows. Not 10, not 20, no less than 1к.   
+- Insert rows infrequently, no more than once in a second, in a single thread
+- It's better to increase batch size instead of using more than one inserting thread 
 
 
-### 5.0.1 Вставка данных с curl/json:
+### 5.0.1 Inserting data usingcurl/json:
 
-[Alex More]: используйте input_format_skip_unknown_fields=1 чтобы игнорировать поля, которые есть в json, но нет в схеме
+[Alex More]: Use input_format_skip_unknown_fields=1 to ignore  fields present in JSON, but absent in schema
 
 `curl -H "Content-Type: application/json" -X POST -d 'insert into table_name FORMAT JSONEachRow {"create_date": "12345", "ololo":"ololo"}' http://default:psw@localhost:8123/?input_format_skip_unknown_fields=1`
 
 
-Vadim Metikov, [26.02.18 13:59]
-кто-нибудь прореживал так данные? партишионинг по ГГГГММ более всего подходит
-
-### 5.0.2 Ошибки при вставке данных:
-#### Вставляйте данные точно!
+### 5.0.2 Errors during data insert:
+#### Be precise!
 > `DB::Exception: Element of set in IN or VALUES is not a constant expression`
 
 [Milovidov] Cвязано с тем, что данные для вставки записаны не в точно ожидаемом формате. Тогда ClickHouse пытается интерпретировать указанное значение как произвольное выражение и затем преобразовать его к нужному типу данных.
