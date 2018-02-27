@@ -39,28 +39,27 @@ will use only localhost (because of spec- gcc flag, even if you're using clang)
 
 ## 1.2 single-node
 
-## 1.3 кластер: выдержка из документации:
-С настройками по умолчанию, ZooKeeper является бомбой замедленного действия:
-Сервер ZooKeeper не будет удалять файлы со старыми снепшоты и логами при использовании конфигурации по умолчанию (см. autopurge), это является ответственностью оператора.
-> Эту бомбу нужно обезвредить <
+## 1.3 cluster: from official docs:
+With default settings Zookeeper is a time bomb. It doesn't dele its logs or snapshots. Take care of it.
 https://clickhouse.yandex/docs/ru/operations/tips.html
 
 ## 1.4 docker
 
 # 2. работа с clickhouse, общее
 
-## 2.1 типы таблиц
+## 2.1 Table engins
 
 ### MergeTree
 
 [Andrey]
->какой engine использовать для хранения данных, не привязанных к дате? Например, есть список доменов с определёнными характеристиками (~100 млн). Надо получать запросами различную статистику по этим данным. MergeTree требует EventDate.
+>What engine should I use for storing data that does not depends on date/time? For example a domain list with some properties (~100M records ).
+ We need to get various statistics from this data. MergeTree requires EventDate.
 
 [Stanislav Vlasov]
-c MergeTree  можно использовать функцию для партиционирования, по-умолчанию - от даты. Где-то в недрах док есть пример по созданию таблиц с кастомным ключом.
+ MergeTree uses partitioning functon, date by default. Documentation contains example of creating tables with a custom keys.
 
 [Alexey Milovidov]
-MergeTree вообще не требует партиционирования. Можно использовать без партиционирования - не указывать PARTITION BY:
+MergeTree doesn't requre partitioning at all. Just don't use PARTITION BY
 
 https://clickhouse.yandex/docs/ru/single/#proizvolnyi-klyuch-particzionirovaniya
 
@@ -136,7 +135,7 @@ You can write single rows, but infrequently.
 
 Если нужно чтобы данные собирались и интервально сбрасывались, то нет смысла изобретать велосипед, Buffer для того и живет
 
-### 5.0.3 Перенос данных.
+### 5.0.3 Moving/restoring data.
 
 Для переноса данных достаточно остановить сервер и перенести директорию с данными (например /var/lib/clickhouse) с одной машины на другую любым
 удобным способом - scp/rsync/mount hdd/ssd :-)
@@ -224,7 +223,7 @@ string with regexp/group by regexp #поиск по регулярному вы�
     │  1078529 │                              │
     │   556649 │ [StatusChanger]              │
 
-## 5.4 Работа с внешними словарями
+## 5.4 External dictionaries
 
 Для чего удобно использовать внешние словари (например c MySQL) [shegloff]
 
