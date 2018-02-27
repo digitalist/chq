@@ -1,9 +1,11 @@
 # 0. Intro
 
-Дока формируется на основе получения личных шишек, консультаций и редактированной копипасты с https://t.me/clickhouse_ru.
-Дополнения приветствуются.
+[Russian version](README.md)
 
-# 1. сборка и запуск
+This file is an ongoing compilation from our own errors, questions and edited copy-paste from [ClickHouse telegram channel]https://t.me/clickhouse_ru.
+Improvements and PR's are welcome
+
+# 1. Building/installing/running
 
 ## 1.0 tl;dr: подключение
 
@@ -67,9 +69,8 @@ https://clickhouse.yandex/docs/ru/single/#proizvolnyi-klyuch-particzionirovaniya
 # 3. Language bindings and libraries
 
     - Python: clickhouse_driver, native/binary  python<->c<->clickhouse.
+    - Sqlalchemy Clickhouse driver from Cloudflare
     - JDBC: works via http (port 8123)
-
-
 
 
 # 4. Buffering and othir miscellaneous infrastructure
@@ -111,14 +112,13 @@ You can write single rows, but infrequently.
 #### Be precise!
 > `DB::Exception: Element of set in IN or VALUES is not a constant expression`
 
-[Milovidov] Cвязано с тем, что данные для вставки записаны не в точно ожидаемом формате. Тогда ClickHouse пытается интерпретировать указанное значение как произвольное выражение и затем преобразовать его к нужному типу данных.
-Чтобы увидеть более явно, где возникает проблема, выставите настройку input_format_values_interpret_expressions в ноль.
+[Milovidov] 
+This errors caused by data being in slightly wrong format. ClickHouse tries to interpret incoming value as an arbitary expression and convert it to needed data type. 
+To trace the problem set input_format_values_interpret_expressions to 0
 
-#### Еще раз: в батчах тоже вставляйте данные точно!
-[Time Ber] Данные могут поехать, когда в исходных данных нет значения, а коде формирования батча не учитывается это и не проставляются дефолтные значения для каждого из типов.
-Например в данных нет даты, тогда в строку для КХ нужно ставить '0000-00-00', иначе при вставке столбцы "поедут"
-
-
+#### And again: When you're using batch inserts, be precise!
+[Time Ber] Data can go wrong (shifting columns) when there's absent input value but your batch-creating code doesn't fix it. ClickHouse inserts default values for every corresponding type  .
+I.e if there's no date in data, your code should set it to '0000-00-00', or your columns will shift 
 
 ### 5.0.2 таблица типа Buffer vs buffer-приложение
 >Nikita Tokarchuk, [21.02.18 18:46]
@@ -239,15 +239,15 @@ and keeps it in memory.
 - Через словарь и getDict. [Vasilij Abrosimov]
 
 
-## 5.5 Работа с джойнами
+## 5.5 Working with joins
 
-Если делать дурные запросы, то при джойнах КХ может тянуть в память одну из таблиц целиком, что может вас убить.
-> дурной запрос: `ANY INNER JOIN urls2 USING id`
+If you're doing dumb queries with very big tables, during joins CH can pull one of the tables in memory and it can be too much.
+> dumb query: `ANY INNER JOIN urls2 USING id`
 
-ограничим условие с подзапросом и `where`:
+let's constrain it with subquery and `where` clause:
 
 >`ANY INNER JOIN (SELECT id, url FROM urls2 WHERE id = url_id) USING id` [Tima Ber]
-или
+or
 >`ANY INNER JOIN (SELECT id, count() AS shows FROM urls2 WHERE day = today) USING (id)` [Shegloff]
 
 ## collapsingMergeTree related (?)
@@ -256,39 +256,36 @@ event - runningDifference(event) [Владимир Мюге]
 
 ## 5.6
 
-Геннадий Алексеев, [27.02.18 14:37]
-Здравствуйте. А не подскажете как составить такой запрос, у меня есть два массива во вложенном запросе, в результате я хочу получить элементы первого массива, которые не содержатся во втором?
+## 5.6
 
-Natalya, [27.02.18 14:44]
-[In reply to Геннадий Алексеев]
-как то так
+Gennadiy Alekseev [@alekseevgena]
+I have two arrays inside a subquery, how to get their difference? 
 
-Natalya, [27.02.18 14:44]
-SELECT [3, 4, 8] as mas, arrayFilter(x -> x NOT IN (1,2,3,4), mas) AS res
+[Natalya]:
 
-Геннадий Алексеев, [27.02.18 14:45]
-Спасибо! Попробуй
+    `SELECT [3, 4, 8] as mas, arrayFilter(x -> x NOT IN (1,2,3,4), mas) AS res`
 
-Alexey Sheglov, [27.02.18 14:48]
-еще такой изврат есть:
 
-Alexey Sheglov, [27.02.18 14:48]
-SELECT
-    arrayJoin(one_arr) AS res,
-    any(two_arr) AS two_arr
-FROM
-(
+[Alexey Sheglov / @Shegloff]:
+
+Another slightly perverted solution:
+
     SELECT
-        [1, 2, 3, 4, 5] AS one_arr,
-        [3, 4, 5, 6, 7, 8] AS two_arr
-)
-GROUP BY res
-HAVING has(two_arr, res) = 0
-
-┌─res─┬─two_arr───────┐
-│   1 │ [3,4,5,6,7,8] │
-│   2 │ [3,4,5,6,7,8] │
-└─────┴───────────────┘
+        arrayJoin(one_arr) AS res,
+        any(two_arr) AS two_arr
+    FROM
+    (
+        SELECT
+            [1, 2, 3, 4, 5] AS one_arr,
+            [3, 4, 5, 6, 7, 8] AS two_arr
+    )
+    GROUP BY res
+    HAVING has(two_arr, res) = 0
+    
+    ┌─res─┬─two_arr───────┐
+    │   1 │ [3,4,5,6,7,8] │
+    │   2 │ [3,4,5,6,7,8] │
+    └─────┴───────────────┘
 
 
 Qq, [27.02.18 15:58]

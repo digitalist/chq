@@ -1,4 +1,6 @@
-# 0. Intro
+# 0. Intro 
+
+[English version](README_en.md)
 
 Дока формируется на основе получения личных шишек, консультаций и редактированной копипасты с https://t.me/clickhouse_ru.
 Дополнения приветствуются.
@@ -257,6 +259,54 @@ string with regexp/group by regexp #поиск по регулярному вы�
 ## collapsingMergeTree related (?)
 вывести предыдущее значение строки
 event - runningDifference(event) [Владимир Мюге]
+
+
+## 5.6
+
+[Gennadiy Alekseev / @alekseevgena]
+У меня есть два массива во вложенном запросе, в результате я хочу получить элементы первого массива, которые не содержатся во втором?
+
+[Natalya]:
+
+    `SELECT [3, 4, 8] as mas, arrayFilter(x -> x NOT IN (1,2,3,4), mas) AS res`
+
+
+[Alexey Sheglov / @Shegloff]:
+
+еще такой изврат есть:
+ SELECT
+        arrayJoin(one_arr) AS res,
+        any(two_arr) AS two_arr
+    FROM
+    (
+        SELECT
+            [1, 2, 3, 4, 5] AS one_arr,
+            [3, 4, 5, 6, 7, 8] AS two_arr
+    )
+    GROUP BY res
+    HAVING has(two_arr, res) = 0
+    
+    ┌─res─┬─two_arr───────┐
+    │   1 │ [3,4,5,6,7,8] │
+    │   2 │ [3,4,5,6,7,8] │
+    └─────┴───────────────┘
+
+
+[Qq]
+
+Convert a column to a string (analogue of concat/group_concat) / rotate + concat column
+
+    А
+    1
+    2
+    3
+    to: 1,2,3
+ 
+
+[Nikolai Kochetov]
+For columns: you can do `groupArray()`, then join resulting array
+For - `arrayStringConcat()`
+
 
 # 6.  работа с кафкой и zookeeper:
 
