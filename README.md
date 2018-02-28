@@ -292,9 +292,9 @@ event - runningDifference(event) [Владимир Мюге]
     └─────┴───────────────┘
 
 
-[Qq]
 
-Convert a column to a string (analogue of concat/group_concat) / rotate + concat column
+не массив, а столбец преобразовать в строку (аналог concat/group_concat)/поворот + concat колонки [Qq]
+
 
     А
     1
@@ -304,8 +304,9 @@ Convert a column to a string (analogue of concat/group_concat) / rotate + concat
  
 
 [Nikolai Kochetov]
-For columns: you can do `groupArray()`, then join resulting array
-For - `arrayStringConcat()`
+Для колонок: можно сделать `groupArray()`, потом джойн на результат
+Для массива - `arrayStringConcat()`
+
 
 
 # 6.  работа с кафкой и zookeeper:

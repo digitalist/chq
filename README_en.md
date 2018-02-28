@@ -101,7 +101,7 @@ You can write single rows, but infrequently.
 - It's better to increase batch size instead of using more than one inserting thread 
 
 
-### 5.0.1 Inserting data usingcurl/json:
+### 5.0.1 Inserting data using curl/json:
 
 [Alex More]: Use input_format_skip_unknown_fields=1 to ignore  fields present in JSON, but absent in schema
 
@@ -222,20 +222,25 @@ string with regexp/group by regexp #поиск по регулярному вы�
 
 ## 5.4 External dictionaries
 
-External dictionaries use cases, MySQL example [shegloff]
+### External dictionaries use cases, MySQL example 
+
+
+While using join you have to load data for *every* query. Using dictionary avoids it by placing all needed data in-memory once
+and syncing it on a regular basis
+
+[shegloff]
 
 >Suppose we have ClickHouse table BigDataBannerShows.LogsAggregated
-We `where` как раз идут условия на всякие user_options в UserDictionary.UserInfo, status в Partners.Site и так далее
-вот эти таблицы - чтобы не копировать в кликхаус их постоянно, удобно подключить как внешние словари
-они раз в 5 мин обновляются и хорошо
+We put business logic dictionary values (like user_options from UserDictionary.UserInfo, status from Partners.Site and so on  ) 
+into a `where` clause. Those  are tables in MySQL and to avoid copying them to ClickHouse we plug them in as an external dictionaries,
+auto-syncing every 5 minutes..
 
-ClickHouse doesn't ask MySQL directly on per-request basis, instead it selects all needed data every 5 minutes
+> ClickHouse doesn't ask MySQL directly on per-request basis, instead it selects all needed data every 5 minutes
 and keeps it in memory.
 
 >You don't have to keep entire dictionary in memory, there's an option to keep a limited cache, leaving full data in, for example, MySQL [Yuran aka yourock88]
->cловарь 1 раз загружается в память, тогда как при джоине вы это делаете на каждый запрос
 
- *Как в подзапросе сделать условие на колонку из внешней таблицы? Это вообще возможно?*
+>*Как в подзапросе сделать условие на колонку из внешней таблицы? Это вообще возможно?*
 - Через словарь и getDict. [Vasilij Abrosimov]
 
 
@@ -254,12 +259,11 @@ or
 вывести предыдущее значение строки
 event - runningDifference(event) [Владимир Мюге]
 
-## 5.6
+## 5.6 Miscellaneous queries examples
 
-## 5.6
 
-Gennadiy Alekseev [@alekseevgena]
-I have two arrays inside a subquery, how to get their difference? 
+-  I have two arrays inside a subquery, how to get their difference?  Gennadiy Alekseev [@alekseevgena]
+ 
 
 [Natalya]:
 
@@ -288,28 +292,20 @@ Another slightly perverted solution:
     └─────┴───────────────┘
 
 
-Qq, [27.02.18 15:58]
-[In reply to kamish]
-не массив, а столбец преобразовать в строку
-например есть столбец
-А
-1
-2
-3
 
-нужно получить строку 1,2,3
+- How to convert a column to a string (analogue of concat/group_concat) / rotate + concat column [Qq]
 
-kamish, [27.02.18 15:59]
-я точно помню, что в доке есть функцич
+    А
+    1
+    2
+    3
+    to: 1,2,3
+ 
 
-Qq, [27.02.18 15:59]
-да вот никак найти не могу
+[Nikolai Kochetov]
+For columns: you can do `groupArray()`, then join resulting array
+For - `arrayStringConcat()`
 
-Nikolai Kochetov, [27.02.18 15:59]
-можно сделать groupArray, а затем склеивать массив
-
-Nikolai Kochetov, [27.02.18 16:01]
-для массива - arrayStringConcat
 
 
 # 6.  работа с кафкой и zookeeper:
@@ -336,37 +332,40 @@ tldr: при работе с кафкой надо создать две таб�
 
 
 
-## 7. Проблемы и вопросы
+## 7. Troubleshooting
 
-### 7.1 Расхождения при вставке данных:
+### 7.1 Inconsistencies during data loading:
 [Milovidov]
+ 
+Data insert is always 1:1. If there were no error messages, that is, if  `INSERT SELECT` query was successfull- all data is loaded.
+There are cases whith look-alike errors:
 
-Вставка всегда 1 к 1. Если не было сообщения об ошибке - то есть, если запрос `INSERT SELECT` выполнился успешно - все данные будут вставлены.
+- Insertion of the text dump containing new line escaping: 
+    
+    `abc \\ 
+    def`
+    
+    Raw (`wc -l`) line count will be bigger than real line count
+      
+- Insertion into a Distributed table, which transfers data in async mode 
 
-Какие могут быть случаи, когда возникают похожие ошибки:
+- Duplicated blocks of data inserted into ReplicatedMergeTree table will be de-duplicated.
 
-- вставка текстового дампа, в котором есть строки с переводом строки, экранированные как `abc\\
-def`. Тогда количество строк, отображаемое wc -l, будет фактически больше реального.
+- Writing to a table with an engine which changes data during merge (Collapsing-, Replacing- types)
 
-- вставка в Distributed таблицу, которая развозит данные асинхронно.
+- Distributed table with incorrect cluster configuration: i.e. `internal_replication = 1` with non-Replicated tables; or when
+you mix up shards and replicas
 
-- вставка в ReplicatedMergeTree полностью повторяющихся блоков данных, которые дедуплицируются;
+- Writing to a Replicated table and reading from delayed replica 
 
-- вставка в таблицу, которая меняет количество строк при мерже, типа Collapsing, Replacing...
-
-- вставка в Distributed таблицу с неправильной конфигурацией кластера - например, internal_replication = 1 при использовании не-Replicated таблиц; или когда перепутали шарды и реплики;
-
-- вставка в Replicated таблицу и чтение данных с отстающих реплик;
-
-- вставка в Buffer таблицу и чтение из обычной таблиц
+- Writing to a Buffer table while reading from another type table
 
 
-
-### 7.2 реплики
+### 7.2 Replica
 
 #### Начало репликации
 Alex [@Player_a], [20.02.18 01:37]
-Есть база с collapsingmergetree таблицей, размером в 100 Гб.
+Есть база с CollapsingMergeTree таблицей, размером в 100 Gb.
 Появилась необходимость поднять реплику и возник вопрос - а как собственно происходит синхронизация?
 Как на реплику отправить 100гигабайт, которые уже есть на мастере?
 
