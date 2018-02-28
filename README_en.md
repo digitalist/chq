@@ -1,4 +1,4 @@
-# 0. Intro
+# 0. ClickHouse unofficial FAQ. Intro
 
 [Russian version](README.md)
 
