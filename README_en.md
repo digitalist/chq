@@ -2,7 +2,7 @@
 
 [Russian version](README.md)
 
-This file is an ongoing compilation from our own errors, questions and edited copy-paste from [ClickHouse telegram channel]https://t.me/clickhouse_ru.
+This file is an ongoing compilation from our own errors, questions and edited copy-paste from [ClickHouse telegram channel](https://t.me/clickhouse_ru).
 Improvements and PR's are welcome
 
 # 1. Building/installing/running
