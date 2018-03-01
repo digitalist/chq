@@ -363,15 +363,19 @@ you mix up shards and replicas
 
 ### 7.2 Replica
 
-#### Начало репликации
+#### Replication setup
 Alex [@Player_a], [20.02.18 01:37]
-Есть база с CollapsingMergeTree таблицей, размером в 100 Gb.
-Появилась необходимость поднять реплику и возник вопрос - а как собственно происходит синхронизация?
-Как на реплику отправить 100гигабайт, которые уже есть на мастере?
+Database with CollapsingMergeTree table, about 100 Gb in size.
+How to setup a replication? How does it work? How to send existing data from master?
+
 
 [Alexey Milovidov], [20.02.18 01:41]
-Если у вас таблица уже имеет тип ReplicatedCollapsingMergeTree, то всё просто: добавление новой реплики делается запросом CREATE TABLE на новом сервере. В параметрах указывается тот же путь таблицы в ZK, но другой идентификатор реплики. После создания, реплика синхронизируется сама - идёт и скачивает все нужные данные.
-Если таблица просто CollapsingMergeTree (не Replicated) - то посмотрите раздел документации "Преобразование MergeTree в ReplicatedMergeTree".
+If your table already has ReplicatedCollapsingMergeTree type, it's simple: new replica is added
+by `CREATE TABLE` query on the new server.
+Set same table path as in ZooKeeper but with another replica ID. After creation replica will sync itself - download all the data it needs;
+В параметрах указывается тот же путь таблицы в ZK, но другой идентификатор реплики. После создания, реплика синхронизируется сама -
+If your table is CollapsingMergeTree (not Replicated) - see the docs: [Converting from ReplicatedMergeTree to MergeTree](https://clickhouse.yandex/docs/en/table_engines/replication/#converting-from-mergetree-to-replicatedmergetree).
+
 
 #### диагностика репликаций
 В логи зукипера почти нет смысла смотреть,  лучше в кликхаусные (там будет что-то вроде pulling logs to queue).
