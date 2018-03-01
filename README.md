@@ -373,8 +373,8 @@ Alex [@Player_a], [20.02.18 01:37]
 
 #### диагностика репликаций
 В логи зукипера почти нет смысла смотреть,  лучше в кликхаусные (там будет что-то вроде pulling logs to queue).
-Проще посмотреть select * from system.replicas WHERE database='db' AND table='table' FORMAT Vertical, там интересные поля last_queue_update, active_replicas, absolute_delay.
-BTW Если в удобоваривом виде хочется посмотреть, что происходит внутри, то можно включить <part_log> в конфиге и смотреть в таблицу system.part_log.
+Проще посмотреть `select * from system.replicas WHERE database='db' AND table='table' FORMAT Vertical`, там интересные поля `last_queue_update`, `active_replicas`, `absolute_delay`.
+BTW Если в удобоваримом виде хочется посмотреть, что происходит внутри, то можно включить `<part_log>` в конфиге и смотреть в таблицу `system.part_log`.
 [Vitaliy Lyudvichenko]
 
 

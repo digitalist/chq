@@ -9,7 +9,7 @@ Improvements and PR's are welcome
 
 ## 1.0 tl;dr: подключение
 
-CH binds on two ports
+CH binds on two ports:
 - 8123 (http),
 - 9000 (binary protocol).
 
@@ -37,6 +37,7 @@ will use only localhost (because of spec- gcc flag, even if you're using clang)
 ## 1.3 single-node
 
 ## 1.4 cluster/replica
+    see
 
 
 ## 1.2 single-node
@@ -377,10 +378,11 @@ Set same table path as in ZooKeeper but with another replica ID. After creation 
 If your table is CollapsingMergeTree (not Replicated) - see the docs: [Converting from ReplicatedMergeTree to MergeTree](https://clickhouse.yandex/docs/en/table_engines/replication/#converting-from-mergetree-to-replicatedmergetree).
 
 
-#### диагностика репликаций
-В логи зукипера почти нет смысла смотреть,  лучше в кликхаусные (там будет что-то вроде pulling logs to queue).
-Проще посмотреть select * from system.replicas WHERE database='db' AND table='table' FORMAT Vertical, там интересные поля last_queue_update, active_replicas, absolute_delay.
-BTW Если в удобоваривом виде хочется посмотреть, что происходит внутри, то можно включить <part_log> в конфиге и смотреть в таблицу system.part_log.
+#### Replica troubleshooting
+There's little sense looking ZooKeeper's logs, better look CH own logs (there will be something like 'pulling logs to queue'.)
+It's simpler to run `select * from system.replicas WHERE database='db' AND table='table' FORMAT Vertical`, related fields are
+ `last_queue_update`, `active_replicas`, `absolute_delay`.
+BTW To take a look what's going on under the hood, turn on `<part_log>` option in config and check `system.part_log` table.
 [Vitaliy Lyudvichenko]
 
 
