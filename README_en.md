@@ -181,9 +181,9 @@ counter_id находится в составе primary key:
         FROM bigdb.ponylog
         GROUP BY extract(desc, '\\[.*?]')
 
-## 5.3 Поиск по строкам:
+## 5.3 Searching strings
 
-string = # точное совпадение
+string = # match
 
     SELECT count(*)
     FROM bigdb.ponylog
@@ -196,7 +196,7 @@ string = # точное совпадение
 
     1 rows in set. Elapsed: 0.782 sec. Processed 38.96 million rows, 3.93 GB (49.80 million rows/s., 5.03 GB/s.)
 
-string like '%pattern%'  #частичное совпадение
+string like '%pattern%'  # partial match
 
     SELECT count(*)
     FROM bigdb.ponylog
@@ -208,7 +208,7 @@ string like '%pattern%'  #частичное совпадение
 
     1 rows in set. Elapsed: 0.832 sec. Processed 38.96 million rows, 3.93 GB (46.81 million rows/s., 4.73 GB/s.)
 
-string with regexp/group by regexp #поиск по регулярному выражению, с группировкой по нему же
+string with regexp/group by regexp
 
     SELECT
         count(*),
@@ -296,11 +296,11 @@ Another slightly perverted solution:
 
 - How to convert a column to a string (analogue of concat/group_concat) / rotate + concat column [Qq]
 
-    А
-    1
-    2
-    3
-    to: 1,2,3
+        А
+        1
+        2
+        3
+        to: 1,2,3
  
 
 [Nikolai Kochetov]
@@ -309,7 +309,7 @@ For - `arrayStringConcat()`
 
 
 
-# 6.  работа с кафкой и zookeeper:
+# 6.  Kafka/Zookeeper:
 
 ## 6.1
 [использование zk](https://docs.hortonworks.com/HDPDocuments/HDP2/HDP-2.6.2/bk_kafka-component-guide/content/kafka-zookeeper-multiple-apps.html) для нескольких приложений одновременно (например, кафка+clickhouse)
@@ -343,7 +343,7 @@ There are cases whith look-alike errors:
 
 - Insertion of the text dump containing new line escaping: 
     
-    `abc \\ 
+    `abc \\
     def`
     
     Raw (`wc -l`) line count will be bigger than real line count
@@ -395,6 +395,22 @@ There are no such part on this replica. I did `detach partition 201801` and `att
 You can delete everything in `detached` directory on a broken replica, and after `attach` it will download entire partition.
 
 
+#### Inconsistent partition data on a replica node
+[Vladislav Denisov]
+`Feb 15 16:05:59 cdn2 docker[15331]: 2018.02.15 13:05:59.045028 [ 11 ] <Debug> local.clickstream (StorageReplicatedMergeTree): Part 20180101_20180131_0_267872_24 (state Deleting) should be deleted after previous attempt before fetch`
+
+I noticed inconsitent data, deleted partition and did `scp` copy from the mirrior node, now log file is full of errors like this. Wat do?
+
+[Alexey Sheglov]:
+
+1. `detach partition` - on both nodes parition will be move to `detached` dir
+
+2. problem_node: `$ rm -rf /path/to/clickhouse_data/detached/*`
+
+3. `attach partition`, problem node will sync partition from healthy node
+
+
+
 #### Зачистка и удаление реплик
 
 > [Vadim Metikov]
@@ -402,20 +418,6 @@ You can delete everything in `detached` directory on a broken replica, and after
 > Пришлось вывести сервер из кластера КХ . При заведении создаю реплицируемые таблицы и говрит, что реплика уже есть:
 > Code: 253. DB::Exception: Received from localhost:9000, 127.0.0.1. DB::Exception: Replica /clickhouse/tables/01/graphite_tree/replicas/r1 already exists..
 > добавлю как 4я реплика, как удалить старую r1 ?
-
-#### Расхождение данных в партициях реплики
-[Vladislav Denisov]
-`Feb 15 16:05:59 cdn2 docker[15331]: 2018.02.15 13:05:59.045028 [ 11 ] <Debug> local.clickstream (StorageReplicatedMergeTree): Part 20180101_20180131_0_267872_24 (state Deleting) should be deleted after previous attempt before fetch`
-
-Заметил расхождения в данных, полностью удалил партицию и перелил с зеркальной ноды через scp, теперь весь лог в таких ошибках. Можно как-то вылечить?
-
-[Alexey Sheglov]:
-
-1. detach partition - на обеих репликах партиция перенесется в папку detached
-
-2. очистите папку detached на проблемной ноде
-
-3. attach partition, и проблемная нода скачает партицию со здоровой
 
 
 [Max Pavlov]: Нужно удалить данные о реплике в зукипере. Это делается автоматом если на старой реплике запустить drop database или drop table, там где есть реплицируемые таблицы
@@ -427,17 +429,13 @@ You can delete everything in `detached` directory on a broken replica, and after
 (либо через gui типа zooinspector)
 
 
+#### Scaling ClickHouse without distributed tables
 
-
-
-#### масштабирование КХ без distributed tables
-
-один из способов без использование distributed tables:
-
+[Kirill Shvakov]
 Добавляем сервера и всё. Данные попадают в кафку, от туда мы пишем в шарды КХ, distributed таблицы на запись не используем.  Если нужно больше места или уперлись в то что памяти на объем данных сервера не хватает добавляем шард.
 Соответственно после добавления шарда данные начинают размазываться немного по другому,
 а т.к. старые данные переодически удаляются то и по размеру шарды постепенно выравниваются
-[Kirill Shvakov]
+
 
 #### Кэш КХ (его нет!)
 
