@@ -387,10 +387,13 @@ BTW To take a look what's going on under the hood, turn on `<part_log>` option i
 
 
 #### Exception: Could not find a column of minimum size in MergeTree
-> ошибка Exception: Could not find a column of minimum size in MergeTree, part /var/lib/clickhouse//data/public/events/20180124_20180124_14437_14442_1/
-> такого куска нет на этой реплике. Я сделал detach partition 201801 и attach partition 201801, при аттаче потерянный кусочек скачался с другой реплики и стало хорошо
+>   `Exception: Could not find a column of minimum size in MergeTree,
+>    part /var/lib/clickhouse//data/public/events/20180124_20180124_14437_14442_1/`
 
-можете на проблемной реплике вообще удалить все данные после detach из папки detached, после attach проблемная скачает всю партицию
+There are no such part on this replica. I did `detach partition 201801` and `attach partition 201801`, during attach that lost bit synced from another replica, problem solved
+
+You can delete everything in `detached` directory on a broken replica, and after `attach` it will download entire partition.
+
 
 #### Зачистка и удаление реплик
 
@@ -399,16 +402,6 @@ BTW To take a look what's going on under the hood, turn on `<part_log>` option i
 > Пришлось вывести сервер из кластера КХ . При заведении создаю реплицируемые таблицы и говрит, что реплика уже есть:
 > Code: 253. DB::Exception: Received from localhost:9000, 127.0.0.1. DB::Exception: Replica /clickhouse/tables/01/graphite_tree/replicas/r1 already exists..
 > добавлю как 4я реплика, как удалить старую r1 ?
-
-
-[Max Pavlov]: Нужно удалить данные о реплике в зукипере. Это делается автоматом если на старой реплике запустить drop database или drop table, там где есть реплицируемые таблицы
-Иначе нужно добавлять новую реплику с другим номером
-
-после этого зачистить zookeepr:
-
-`[zk: localhost:2181(CONNECTED) 9] delete /clickhouse/tables/01/graphite/replicas/r1/`
-(либо через gui типа zooinspector)
-
 
 #### Расхождение данных в партициях реплики
 [Vladislav Denisov]
@@ -423,6 +416,18 @@ BTW To take a look what's going on under the hood, turn on `<part_log>` option i
 2. очистите папку detached на проблемной ноде
 
 3. attach partition, и проблемная нода скачает партицию со здоровой
+
+
+[Max Pavlov]: Нужно удалить данные о реплике в зукипере. Это делается автоматом если на старой реплике запустить drop database или drop table, там где есть реплицируемые таблицы
+Иначе нужно добавлять новую реплику с другим номером
+
+после этого зачистить zookeepr:
+
+`[zk: localhost:2181(CONNECTED) 9] delete /clickhouse/tables/01/graphite/replicas/r1/`
+(либо через gui типа zooinspector)
+
+
+
 
 
 #### масштабирование КХ без distributed tables
