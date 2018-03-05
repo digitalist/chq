@@ -76,16 +76,18 @@ https://clickhouse.yandex/docs/ru/single/#proizvolnyi-klyuch-particzionirovaniya
 
 # 4. Buffering and othir miscellaneous infrastructure
 
-Apache Kafka is the most used option
+Apache Kafka is the most used option.
 
 
-[proxysql](http://www.proxysql.com/blog/proxysql-143-clickhouse) - для реализации механизма очереди запросов -
-например "Если число соединений между серверами будет больше чем max_distributed_connections,
-выкинется исключение или запросы встанут в очередь?"
-С дефолтным значением 1024 и если у вас в кластере меньше 1024 шардов, вы в этот лимит никогда не упрётесь.
-Значение можете проверить запросом select * from system.settings where name = 'max_distributed_connections'.
+>If number of connections between nodes will reach max_distributed_connections, will there be an exception or
+queries will be queued?"
 
-балансировщик и прокси [chproxy](https://github.com/Vertamedia/chproxy)
+With default value 1024, if your cluster has < 1024 shards, you will never hit that limit.
+Query to check this value: `select * from system.settings where name = 'max_distributed_connections'.`
+
+See: [proxysql](http://www.proxysql.com/blog/proxysql-143-clickhouse) - for query queueing.
+
+Balancer & proxy [chproxy](https://github.com/Vertamedia/chproxy)
 
 
 # 5. Working with queries
@@ -133,16 +135,14 @@ I.e if there's no date in data, your code should set it to '0000-00-00', or your
 Если нужно чтобы данные собирались и интервально сбрасывались, то нет смысла изобретать велосипед, Buffer для того и живет
 
 ### 5.0.3 Moving/restoring data.
-
-Для переноса данных достаточно остановить сервер и перенести директорию с данными (например /var/lib/clickhouse) с одной машины на другую любым
-удобным способом - scp/rsync/mount hdd/ssd :-)
+All you have to do is stop the server and copy/move data directory (i.e. `/var/lib/clickhouse`) from one machine to another using
+any method you like: scp/rsync/mount drive/blue ray snail mail :-)
 
 Соответственно, и при переустановке самого кликхауза данные подхватятся автоматически.
 
 
 [Salim Murtazaliev]
-Если таблица назначения является реплицируемой, то при записи в таблицу Buffer будут потеряны некоторые ожидаемые свойства реплицируемых таблиц. Из-за произвольного изменения порядка строк и
-размеров блоков данных, перестаёт работать дедупликация данных, в результате чего исчезает возможность надёжной exactly once записи в реплицируемые таблицы.
+Если таблица назначения является реплицируемой, то при записи в таблицу Buffer будут потеряны некоторые ожидаемые свойства реплицируемых таблиц. Из-за произвольного изменения порядка строк и размеров блоков данных, перестаёт работать дедупликация данных, в результате чего исчезает возможность надёжной exactly once записи в реплицируемые таблицы.
 
 ## 5.1 Итерация по базе:
 
@@ -151,19 +151,19 @@ counter_id находится в составе primary key:
 
 запрос 1:
 
-    SELECT * FROM vkad.ponylog WHERE counter_id between {lim} and {skip}  ORDER BY counter_id
+    SELECT * FROM db.ponylog WHERE counter_id between {lim} and {skip}  ORDER BY counter_id
 
 без лимита по памяти на запрос (max_memory_usage в /etc/clichkouse-server/user.xml) -  по дефолту 10 гб - уходит в своп
 с лимитом 2 гб.  - падает на ~10-м запросе. работает медленно
 
 запрос 2:
 
-    SELECT * FROM vkad.ponylog ORDER BY counter_id LIMIT {lim}, {skip}
+    SELECT * FROM db.ponylog ORDER BY counter_id LIMIT {lim}, {skip}
 не падает по памяти, но очень быстро замедляется до неприемлемых значений, при этом нет сортировки.
 
 запрос 3:
 
-    SELECT * FROM vkad.ponylog WHERE counter_id between {start} and {end} ORDER BY counter_id
+    SELECT * FROM db.ponylog WHERE counter_id between {start} and {end} ORDER BY counter_id
 
 летает отлично, быстро, сортировка работает.
 
@@ -171,17 +171,17 @@ counter_id находится в составе primary key:
 руководство о таком предупреждает, но, конечно, нам это не подходит
 
 
-## 5.2 Группировки:
+## 5.2 Group by:
 
-- с помощью функций: в отличие от mysql нельзя сделать запрос в духе `select extract(desc, '\\[.*?]') from TBL group by 1` (сгруппировать по первой колонке)
-нужно делать так:
+- group by column expression: you can't do MySQL-like `select extract(desc, '\\[.*?]') from TBL group by 1` (groupb by first column)
+instead you should do:
 
 
         SELECT extract(desc, '\\[.*?]')
         FROM bigdb.ponylog
         GROUP BY extract(desc, '\\[.*?]')
 
-## 5.3 Searching strings
+## 5.3 String search:
 
 string = # match
 
@@ -196,7 +196,7 @@ string = # match
 
     1 rows in set. Elapsed: 0.782 sec. Processed 38.96 million rows, 3.93 GB (49.80 million rows/s., 5.03 GB/s.)
 
-string like '%pattern%'  # partial match
+string like '%pattern%'  # wildcard match
 
     SELECT count(*)
     FROM bigdb.ponylog
@@ -343,7 +343,8 @@ There are cases whith look-alike errors:
 
 - Insertion of the text dump containing new line escaping: 
     
-    `abc \\
+    `abc \
+
     def`
     
     Raw (`wc -l`) line count will be bigger than real line count
