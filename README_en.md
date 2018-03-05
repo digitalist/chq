@@ -7,7 +7,7 @@ Improvements and PR's are welcome
 
 # 1. Building/installing/running
 
-## 1.0 tl;dr: подключение
+## 1.0 tl;dr: connection
 
 CH binds on two ports:
 - 8123 (http),
@@ -25,7 +25,7 @@ main options:
 - listener (what interface/network card to listen,  0.0.0.0 to listen on all interfaces, if you doon't care for security or running it inside virtual network only)
 - <path>/var/lib/clickhouse/</path>: path to data
 
-- /etc/metrika.xml (default filename) you can override some options:   
+- /etc/metrika.xml (default filename) you can override some options:
     <yandex><zookeeper><node id='1'><host>172.31.16.254</host><port>2181</port></node></zookeeper></yandex>
 
 
@@ -403,7 +403,7 @@ I noticed inconsitent data, deleted partition and did `scp` copy from the mirrio
 
 [Alexey Sheglov]:
 
-1. `detach partition` - on both nodes parition will be move to `detached` dir
+1. `detach partition` - on both nodes parition will be moved to `detached` dir
 
 2. problem_node: `$ rm -rf /path/to/clickhouse_data/detached/*`
 
