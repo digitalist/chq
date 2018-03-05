@@ -37,7 +37,8 @@ will use only localhost (because of spec- gcc flag, even if you're using clang)
 ## 1.3 single-node
 
 ## 1.4 cluster/replica
-    see
+    setup goes here
+    see 7.2 for questions
 
 
 ## 1.2 single-node
@@ -120,25 +121,23 @@ This errors caused by data being in slightly wrong format. ClickHouse tries to i
 To trace the problem set input_format_values_interpret_expressions to 0
 
 #### And again: When you're using batch inserts, be precise!
-[Time Ber] Data can go wrong (shifting columns) when there's absent input value but your batch-creating code doesn't fix it. ClickHouse inserts default values for every corresponding type  .
+[Time Ber] Data can go wrong (shifting columns) when there's absent input
+ value but your batch-creating code doesn't fix it. ClickHouse inserts
+ default values for every corresponding type.
 I.e if there's no date in data, your code should set it to '0000-00-00', or your columns will shift 
 
-### 5.0.2 таблица типа Buffer vs buffer-приложение
+### 5.0.2 Buffer engine table vs external buffer app
 >Nikita Tokarchuk, [21.02.18 18:46]
->В чем может быть плюс своего решения против Buffer таблицы?
-> Цель — буферизировать запросы на вставку, идущие в реалтайме один за другим.
->
-> Документация предлагает два решения — делать буфер в приложении которое делает insert, либо использовать Buffer таблицу
+> Docs suggest two solutions —  in-app buffer or Buffer engine table
 
-[Andrey @rhenix]: Buffer лежит в оперативке + расход на коннекты от разных инсертов. Поэтому в некоторых случаях буферизация на аппликухе куда лучше
-
-Если нужно чтобы данные собирались и интервально сбрасывались, то нет смысла изобретать велосипед, Buffer для того и живет
+[Andrey @rhenix]: Buffer resides in ClickHouse Memory + overhead from connections. In some cases in-app buffering is better.
+If you need a simple 'collect and dump', there's no need to inevnt something, use ClickHouse Buffer.
 
 ### 5.0.3 Moving/restoring data.
 All you have to do is stop the server and copy/move data directory (i.e. `/var/lib/clickhouse`) from one machine to another using
 any method you like: scp/rsync/mount drive/blue ray snail mail :-)
 
-Соответственно, и при переустановке самого кликхауза данные подхватятся автоматически.
+Accordingly, ClickHouse will see this data in a default location if you (re)install it.
 
 
 [Salim Murtazaliev]
@@ -241,7 +240,7 @@ and keeps it in memory.
 
 >You don't have to keep entire dictionary in memory, there's an option to keep a limited cache, leaving full data in, for example, MySQL [Yuran aka yourock88]
 
->*Как в подзапросе сделать условие на колонку из внешней таблицы? Это вообще возможно?*
+>Как в подзапросе сделать условие на колонку из внешней таблицы? Это вообще возможно?
 - Через словарь и getDict. [Vasilij Abrosimov]
 
 
@@ -324,12 +323,12 @@ tldr: при работе с кафкой надо создать две таб�
 
 [использование кафки через командную строку (для тестов)]( http://cloudurable.com/blog/kafka-tutorial-kafka-from-command-line/index.html):
 
-## 6.3 Проблемы
+## 6.3 Troubleshooting
 
-проблемы при укладывании данных из MV в таблицу: в логах
-    StorageKafka (fromkafka): EOF reached for partition 0 offset 59651
+Loading data from MaterialisedView into a table, log messages:
+    `StorageKafka (fromkafka): EOF reached for partition 0 offset 59651`
 
-проверить [stream_flush_interval_ms](https://clickhouse.yandex/docs/en/operations/settings/settings.html)
+check [stream_flush_interval_ms](https://clickhouse.yandex/docs/en/operations/settings/settings.html)
 
 
 
