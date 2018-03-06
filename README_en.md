@@ -411,41 +411,41 @@ I noticed inconsitent data, deleted partition and did `scp` copy from the mirrio
 
 
 
-#### Зачистка и удаление реплик
+#### Replica cleanup and deletion
 
 > [Vadim Metikov]
 >
-> Пришлось вывести сервер из кластера КХ . При заведении создаю реплицируемые таблицы и говрит, что реплика уже есть:
-> Code: 253. DB::Exception: Received from localhost:9000, 127.0.0.1. DB::Exception: Replica /clickhouse/tables/01/graphite_tree/replicas/r1 already exists..
-> добавлю как 4я реплика, как удалить старую r1 ?
+> Had to temporary take out a replica from a ClickHouse cluster.
+> After adding replicated tables during recreating this replica as `r4`:
+> `Code: 253. DB::Exception: Received from localhost:9000, 127.0.0.1. DB::Exception: Replica /clickhouse/tables/01/graphite_tree/replicas/r1 already exists`
+> How to delete old `r1` replica?
 
 
-[Max Pavlov]: Нужно удалить данные о реплике в зукипере. Это делается автоматом если на старой реплике запустить drop database или drop table, там где есть реплицируемые таблицы
-Иначе нужно добавлять новую реплику с другим номером
-
-после этого зачистить zookeepr:
+[Max Pavlov]:  You should delete this replica from ZooKeeper.
+It is done automatically if you run `drop database` or `drop table` on an old replica where you have replicated tables
+Otherwise you have to add new replica with another id and cleanup zookeeper after that:
 
 `[zk: localhost:2181(CONNECTED) 9] delete /clickhouse/tables/01/graphite/replicas/r1/`
-(либо через gui типа zooinspector)
+(or use a GUI like zooinspector)
 
 
 #### Scaling ClickHouse without distributed tables
 
 [Kirill Shvakov]
-Добавляем сервера и всё. Данные попадают в кафку, от туда мы пишем в шарды КХ, distributed таблицы на запись не используем.  Если нужно больше места или уперлись в то что памяти на объем данных сервера не хватает добавляем шард.
-Соответственно после добавления шарда данные начинают размазываться немного по другому,
-а т.к. старые данные переодически удаляются то и по размеру шарды постепенно выравниваются
+We just add servers, that's all. Data goes into Kafka, from there we write it do ClickHouse shards, we don't write to distributed tables.
+If we need more space or data hits a memory limit, we add a shard.
+Accordingly, after adding a shard, data begins to distribute slightly ....???
+and due to periodic deletion of old data, shards gradually equate data size
 
-
-#### Кэш КХ (его нет!)
+#### ClikHouse  cache (it hasn't one) / becnhmarks
 
 > [Jen Zolotarev]:
-> Хочу протестировать производительность Clickhouse с кастомным ключом партиционирования в сравнении с дефолтным (два одинаковых селекта в разные таблицы, но с одинаковыми данными), сейчас застрял на том, что БД кеширует данные для запроса, и поэтому результаты скорости выполнения селекта получаются смазанные.
-> Как почистить этот кеш? БД перезагружал, другие запросы выполнял, но эффекта не дало.
+> I'd like to test ClickHouse performance with a custom partitioning key vs default key
+> using same select queries into a different tables, the problem is CH caches data, blurring benchmark results
+> How to clean ClickHouse cache?
 
 [Kirill Shvakov]:
-Там кэш ОС, у КХ нет кэша, сделайте так:
-
+ClickHouse does not have cache. It uses OS cache. Use this:
 `SET min_bytes_to_use_direct_io=1, merge_tree_uniform_read_distribution=0`
 
 ## 8. Права пользователей, разное.
