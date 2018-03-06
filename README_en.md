@@ -144,9 +144,10 @@ Accordingly, ClickHouse will see this data in a default location if you (re)inst
 ## 5.1 Iterating over data:
 
 ### 5.1.1 with some counter_id
-counter_id находится в составе primary key:
+counter_id in a primary key:
 
     SELECT * FROM db.ponylog ORDER BY counter_id LIMIT {lim}, {skip}
+
 Doesn't crash but quickly slows down to unusable speed.
 
     SELECT * FROM db.ponylog WHERE counter_id between {start} and {end} ORDER BY counter_id
@@ -223,8 +224,8 @@ and keeps it in memory.
 
 >You don't have to keep entire dictionary in memory, there's an option to keep a limited cache, leaving full data in, for example, MySQL [Yuran aka yourock88]
 
->Как в подзапросе сделать условие на колонку из внешней таблицы? Это вообще возможно?
-- Через словарь и getDict. [Vasilij Abrosimov]
+>How to write a WHERE/ON clause on the column from external table?
+- Using dictionary and `getDict()`. [Vasilij Abrosimov]
 
 
 ## 5.5 Working with joins
@@ -242,8 +243,46 @@ or
 вывести предыдущее значение строки
 event - runningDifference(event) [Владимир Мюге]
 
-## 5.6 Miscellaneous queries examples
+## 5.6 Разные вопросы Miscellaneous queries
 
+### 5.6.1 Missing date values
+> подскажите а есть ли способ при выборке count() с группировкой по дате получить
+> 0 для пустых дней, вместо пропущенных строк в результате? вместо
+
+    20180102 1
+    20180104 1
+    получить
+    20180102 1
+    20180103 0
+    20180104 1
+
+[Alexey Sheglov] Немного наркомании
+
+    :) select day, count() from test.huest group by day
+
+    ┌────────day─┬─count()─┐
+    │ 2018-02-21 │       1 │
+    │ 2018-03-03 │       1 │
+    └────────────┴─────────┘
+
+    :) select day, sum(c) as count from (select day, count() as c from test.huest group by day) ALL RIGHT JOIN (select day, c from (select toDate('1970-01-01') + number as day, 0 as c from system.numbers limit 30000) where day between (select min(day) from test.huest) and (select max(day) from test.huest)) USING(day) group by day
+
+    ┌────────day─┬─count─┐
+    │ 2018-02-21 │     1 │
+    │ 2018-02-22 │     0 │
+    │ 2018-02-23 │     0 │
+    │ 2018-02-24 │     0 │
+    │ 2018-02-25 │     0 │
+    │ 2018-02-26 │     0 │
+    │ 2018-02-27 │     0 │
+    │ 2018-02-28 │     0 │
+    │ 2018-03-01 │     0 │
+    │ 2018-03-02 │     0 │
+    │ 2018-03-03 │     1 │
+
+
+
+### 5.6.1 Array diff
 
 -  I have two arrays inside a subquery, how to get their difference?  Gennadiy Alekseev [@alekseevgena]
  
@@ -275,7 +314,7 @@ Another slightly perverted solution:
     └─────┴───────────────┘
 
 
-
+### 5.6.2 Rotating arrays/columns
 - How to convert a column to a string (analogue of concat/group_concat) / rotate + concat column [Qq]
 
         А
