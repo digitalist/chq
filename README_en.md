@@ -133,42 +133,25 @@ I.e if there's no date in data, your code should set it to '0000-00-00', or your
 [Andrey @rhenix]: Buffer resides in ClickHouse Memory + overhead from connections. In some cases in-app buffering is better.
 If you need a simple 'collect and dump', there's no need to inevnt something, use ClickHouse Buffer.
 
+See documentation on issues related to Buffer + Replicated tables.
+
 ### 5.0.3 Moving/restoring data.
 All you have to do is stop the server and copy/move data directory (i.e. `/var/lib/clickhouse`) from one machine to another using
 any method you like: scp/rsync/mount drive/blue ray snail mail :-)
 
 Accordingly, ClickHouse will see this data in a default location if you (re)install it.
 
+## 5.1 Iterating over data:
 
-[Salim Murtazaliev]
-Если таблица назначения является реплицируемой, то при записи в таблицу Buffer будут потеряны некоторые ожидаемые свойства реплицируемых таблиц. Из-за произвольного изменения порядка строк и размеров блоков данных, перестаёт работать дедупликация данных, в результате чего исчезает возможность надёжной exactly once записи в реплицируемые таблицы.
-
-## 5.1 Итерация по базе:
-
-### 5.1.1 использование с counter_id
+### 5.1.1 with some counter_id
 counter_id находится в составе primary key:
 
-запрос 1:
-
-    SELECT * FROM db.ponylog WHERE counter_id between {lim} and {skip}  ORDER BY counter_id
-
-без лимита по памяти на запрос (max_memory_usage в /etc/clichkouse-server/user.xml) -  по дефолту 10 гб - уходит в своп
-с лимитом 2 гб.  - падает на ~10-м запросе. работает медленно
-
-запрос 2:
-
     SELECT * FROM db.ponylog ORDER BY counter_id LIMIT {lim}, {skip}
-не падает по памяти, но очень быстро замедляется до неприемлемых значений, при этом нет сортировки.
-
-запрос 3:
+Doesn't crash but quickly slows down to unusable speed.
 
     SELECT * FROM db.ponylog WHERE counter_id between {start} and {end} ORDER BY counter_id
 
-летает отлично, быстро, сортировка работает.
-
-поскольку нормального explain нет, выглядит это так, что в первом запросе кликхауз пожирает всю доступную память, видимо многократно запихивая индекс в память.
-руководство о таком предупреждает, но, конечно, нам это не подходит
-
+Fastest version
 
 ## 5.2 Group by:
 
